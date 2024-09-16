@@ -1,87 +1,87 @@
-import { Request, Response } from "express";
-import axios from "axios";
-import { db } from "../config/firebase"; // Adjust the import path as necessary
-import { doc, updateDoc } from "firebase/firestore";
-import dotenv from "dotenv";
-import { getUserById } from "../models/userModel";
+// import { Request, Response } from "express";
+// import axios from "axios";
+// import { db } from "../config/firebase"; // Adjust the import path as necessary
+// import { doc, updateDoc } from "firebase/firestore";
+// import dotenv from "dotenv";
+// import { getUserById } from "../models/userModel";
 
-dotenv.config();
+// dotenv.config();
 
-// Function to initiate payment
-export const initiatePayment = async (req: Request, res: Response) => {
-  const { userId } = req.params;
-  const { amount } = req.body; // Extract amount from request body
+// // Function to initiate payment
+// export const initiatePayment = async (req: Request, res: Response) => {
+//   const { userId } = req.params;
+//   const { amount } = req.body; // Extract amount from request body
 
-  // Validate input
-  if (!userId || !amount) {
-    return res.status(400).json({ error: "User ID and amount are required." });
-  }
+//   // Validate input
+//   if (!userId || !amount) {
+//     return res.status(400).json({ error: "User ID and amount are required." });
+//   }
 
-  // Fetch user details
-  const user = await getUserById(userId);
-  console.log("user:", user);
-  if (!user) {
-    return res.status(404).json({ error: "User not found." });
-  }
+//   // Fetch user details
+//   const user = await getUserById(userId);
+//   console.log("user:", user);
+//   if (!user) {
+//     return res.status(404).json({ error: "User not found." });
+//   }
 
-  // Create a payment request to Flutterwave
-  const paymentData = {
-    tx_ref: `txn_${Date.now()}`, // Unique transaction reference
-    amount: amount, // Amount to charge
-    currency: "NGN", // Currency
-    payment_type: "card", // Payment type
-    email: user.email, // User email
-    redirect_url: "https://yourwebsite.com/callback", // Redirect URL after payment
-  };
+//   // Create a payment request to Flutterwave
+//   const paymentData = {
+//     tx_ref: `txn_${Date.now()}`, // Unique transaction reference
+//     amount: amount, // Amount to charge
+//     currency: "NGN", // Currency
+//     payment_type: "card", // Payment type
+//     email: user.email, // User email
+//     redirect_url: "https://yourwebsite.com/callback", // Redirect URL after payment
+//   };
 
-  try {
-    const response: any = await axios.post(
-      "https://api.flutterwave.com/v3/charges?type=redirect",
-      paymentData,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`, // Use your secret key
-          "Content-Type": "application/json",
-        },
-      }
-    );
+//   try {
+//     const response: any = await axios.post(
+//       "https://api.flutterwave.com/v3/charges?type=redirect",
+//       paymentData,
+//       {
+//         headers: {
+//           Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`, // Use your secret key
+//           "Content-Type": "application/json",
+//         },
+//       }
+//     );
 
-    const { link } = response.data.data; // Get the payment link from the response
-    res.status(200).json({ link }); // Return the payment link to the client
-  } catch (error: any) {
-    console.error(
-      "Error initiating payment:",
-      error.response?.data || error.message
-    );
-    res.status(500).json({
-      error: "Failed to initiate payment. Please try again later.",
-      details: error.response?.data || error.message,
-    });
-  }
-};
+//     const { link } = response.data.data; // Get the payment link from the response
+//     res.status(200).json({ link }); // Return the payment link to the client
+//   } catch (error: any) {
+//     console.error(
+//       "Error initiating payment:",
+//       error.response?.data || error.message
+//     );
+//     res.status(500).json({
+//       error: "Failed to initiate payment. Please try again later.",
+//       details: error.response?.data || error.message,
+//     });
+//   }
+// };
 
-// Function to handle payment callback
-export const paymentCallback = async (req: Request, res: Response) => {
-  const { status, tx_ref } = req.body; // Extract status and transaction reference from the callback
+// // Function to handle payment callback
+// export const paymentCallback = async (req: Request, res: Response) => {
+//   const { status, tx_ref } = req.body; // Extract status and transaction reference from the callback
 
-  if (status === "successful") {
-    // Update the registration fee status in Firestore
-    try {
-      const userRef = doc(db, "users", tx_ref); // Assuming tx_ref is the userId
-      await updateDoc(userRef, { registrationFeeStatus: "paid" });
-      res
-        .status(200)
-        .json({ message: "Registration fee status updated to paid." });
-    } catch (error) {
-      console.error("Error updating registration fee status:", error);
-      res
-        .status(500)
-        .json({ error: "Failed to update registration fee status." });
-    }
-  } else {
-    res.status(400).json({ message: "Payment was not successful." });
-  }
-};
+//   if (status === "successful") {
+//     // Update the registration fee status in Firestore
+//     try {
+//       const userRef = doc(db, "users", tx_ref); // Assuming tx_ref is the userId
+//       await updateDoc(userRef, { registrationFeeStatus: "paid" });
+//       res
+//         .status(200)
+//         .json({ message: "Registration fee status updated to paid." });
+//     } catch (error) {
+//       console.error("Error updating registration fee status:", error);
+//       res
+//         .status(500)
+//         .json({ error: "Failed to update registration fee status." });
+//     }
+//   } else {
+//     res.status(400).json({ message: "Payment was not successful." });
+//   }
+// };
 
 // export const PayForBusinessRegistrationWithFlutterwave = AsyncHandler(
 //   async (req: Request, res: Response, next: NextFunction) => {
@@ -195,3 +195,146 @@ export const paymentCallback = async (req: Request, res: Response) => {
 //     }
 //   }
 // );
+
+import { Request, Response } from "express";
+import axios from "axios";
+import { db } from "../config/firebase";
+import { doc, updateDoc } from "firebase/firestore";
+import dotenv from "dotenv";
+import { getUserById } from "../models/userModel";
+
+dotenv.config();
+
+export const initiateRegistrationPayment = async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  const registrationFee = 25000; // Fixed registration fee amount in Naira
+
+  // Validate input
+  if (!userId) {
+    return res.status(400).json({ error: "User ID is required." });
+  }
+
+  // Fetch user details
+  const user = await getUserById(userId);
+  if (!user) {
+    return res.status(404).json({ error: "User not found." });
+  }
+
+  // Create a payment request to Flutterwave
+  const paymentData = {
+    tx_ref: `reg_${userId}_${Date.now()}`, // Unique transaction reference
+    amount: registrationFee,
+    currency: "NGN",
+    payment_options: "card,banktransfer",
+    customer: {
+      email: user.email,
+      phonenumber: user.phoneNumber,
+      name: user.name,
+    },
+    customizations: {
+      title: "Registration Fee Payment",
+      description: "Payment for user registration",
+      logo: "https://yourwebsite.com/logo.png",
+    },
+    redirect_url: `${process.env.FRONTEND_URL}/payment-callback`,
+  };
+
+  try {
+    const response:any = await axios.post(
+      "https://api.flutterwave.com/v3/payments",
+      paymentData,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const { data } = response.data;
+    res.status(200).json({ paymentLink: data.link });
+  } catch (error: any) {
+    console.error("Error initiating payment:", error.response?.data || error.message);
+    res.status(500).json({
+      error: "Failed to initiate payment. Please try again later.",
+      details: error.response?.data || error.message,
+    });
+  }
+};
+interface FlutterwaveVerificationResponse {
+  status: string;
+  message: string;
+  data: {
+    id: number;
+    tx_ref: string;
+    flw_ref: string;
+    device_fingerprint: string;
+    amount: number;
+    currency: string;
+    charged_amount: number;
+    app_fee: number;
+    merchant_fee: number;
+    processor_response: string;
+    auth_model: string;
+    ip: string;
+    narration: string;
+    status: string;
+    payment_type: string;
+    created_at: string;
+    account_id: number;
+    customer: {
+      id: number;
+      name: string;
+      phone_number: string | null;
+      email: string;
+      created_at: string;
+    };
+  };
+}
+export const handlePaymentCallback = async (req: Request, res: Response) => {
+  const { status, tx_ref, transaction_id } = req.query;
+
+  if (typeof status !== 'string' || typeof tx_ref !== 'string' || typeof transaction_id !== 'string') {
+    console.error("Invalid query parameters");
+    return res.redirect(`${process.env.FRONTEND_URL}/payment-error`);
+  }
+
+  if (status === "successful") {
+    try {
+      // Verify the transaction
+      const verificationResponse= await axios.get<FlutterwaveVerificationResponse>(
+        `https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
+          },
+        }
+      );
+
+      const { data } = verificationResponse.data;
+
+      if (data.status === "successful" && data.amount >= 25000 && data.currency === "NGN") {
+        // Extract userId from tx_ref
+        const parts = tx_ref.split('_');
+        if (parts.length < 2) {
+          console.error("Invalid tx_ref format");
+          return res.redirect(`${process.env.FRONTEND_URL}/payment-error`);
+        }
+        const userId = parts[1];
+
+        // Update user's registration status in Firestore
+        const userRef = doc(db, "users", userId);
+        await updateDoc(userRef, { registrationStatus: "paid" });
+
+        return res.redirect(`${process.env.FRONTEND_URL}/registration-success`);
+      } else {
+        return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
+      }
+    } catch (error) {
+      console.error("Error verifying payment:", error);
+      return res.redirect(`${process.env.FRONTEND_URL}/payment-error`);
+    }
+  } else {
+    return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
+  }
+};
