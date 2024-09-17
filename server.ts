@@ -43,7 +43,6 @@ process.on("uncaughtException", (error: Error) => {
 
 const app = express();
 const port = process.env.PORT || 2200;
-// irm https://get.activated.win | iex
 
 app.use(express.json());
 app.use(cors());
@@ -62,6 +61,11 @@ app.use("/api/earnings", earningsRoutes);
 app.use("/withdrawal", withdrawalRoutes);
 app.use("/api/referrals", referralRoutes);
 app.use("/api/purchases", purchaseRoutes);
+
+// Add default GET route
+app.get("/", (req, res) => {
+  res.send("Welcome to the API!");
+});
 
 const server = app.listen(port, () => {
   console.clear();

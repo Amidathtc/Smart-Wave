@@ -43,7 +43,6 @@ process.on("uncaughtException", (error) => {
 });
 const app = (0, express_1.default)();
 const port = process.env.PORT || 2200;
-// irm https://get.activated.win | iex
 app.use(express_1.default.json());
 app.use((0, cors_1.default)());
 app.use(errorHandler_1.errorHandler); // Error handling middleware
@@ -61,6 +60,10 @@ app.use("/api/earnings", earningsRoutes_1.default);
 app.use("/withdrawal", withdrawalRoutes_1.default);
 app.use("/api/referrals", referralRoutes_1.default);
 app.use("/api/purchases", purchaseRoutes_1.default);
+// Add default GET route
+app.get("/", (req, res) => {
+    res.send("Welcome to the API!");
+});
 const server = app.listen(port, () => {
     console.clear();
     console.log(`Server is up and running \nListening to Server on port: ${port}`);
